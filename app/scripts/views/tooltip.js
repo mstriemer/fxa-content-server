@@ -39,11 +39,10 @@ define([
       }
       displayedTooltip = this;
 
-      this.setPosition();
+      this.setInitialPosition();
 
-      var tooltipContainer = this.invalidEl.closest('.input-row');
-      this.$el.appendTo(tooltipContainer);
-
+      this.showTooltip();
+ 
       this.bindDOMEvents();
     },
 
@@ -57,7 +56,7 @@ define([
       invalidEl.find('option').off('click', this._destroy);
     },
 
-    setPosition: function () {
+    setInitialPosition: function () {
       // by default, the position is above the input/select element
       // to show the tooltip below the element, we use JS to set
       // the top of the tooltip to be just below the element it is
@@ -67,8 +66,34 @@ define([
       if (invalidEl.hasClass('tooltip-below')) {
         tooltipEl.addClass('tooltip-below');
         tooltipEl.css({
-          top: invalidEl.outerHeight() + 4  // magic number alert.
+          top: invalidEl.outerHeight() + 12  // magic number alert.
         });
+      } else {
+        tooltipEl.css({
+          top: -40  // magic number alert.
+        });
+      }
+    },
+
+    showTooltip: function() {
+
+      var tooltipContainer = this.invalidEl.closest('.input-row');
+      var tooltipEl = this.$el;
+
+      tooltipEl.appendTo(tooltipContainer);
+
+      var initalOffsetTop = parseInt(this.el.style.top);
+
+      if (tooltipEl.hasClass('tooltip-below')) {
+          var finalOffsetTop = initalOffsetTop - 8;
+          tooltipEl
+            .css('opacity',0)
+            .animate({top:finalOffsetTop,opacity:1},400);
+      } else {
+          var finalOffsetTop = initalOffsetTop + 8; 
+          tooltipEl
+            .css('opacity',0)
+            .animate({top:finalOffsetTop,opacity:1},400);
       }
     },
 
