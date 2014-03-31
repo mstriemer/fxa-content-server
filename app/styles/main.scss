@@ -82,16 +82,13 @@ noscript {
   margin: -5px auto 0 auto;
   min-height: 450px;
   padding: 60px 40px 40px 40px;
+  position: relative;
   text-align: center;
   width: 420px;
 }
 
 #stage.in-content {
   margin-top:85px;
-}
-
-.js #stage {
-  display: none;
 }
 
 header h1,
@@ -620,18 +617,38 @@ input[type="text"] ~ .show-password-label:hover {
   margin-top: 105px;
 }
 
+.spinner-container {
+  animation: fadein 0.3s;
+  background: $stage-background-color;
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1;
+}
+
+/**
+ * Allow the noscript tag to be shown if there is no js
+ */
+.no-js .spinner-container {
+  display: none;
+}
+
 .spinner {
   animation: 0.9s spin infinite linear;
   background-image: url(/images/spinnerlight.png);
   background-size: 36px 36px;
   display: block;
   height: 36px;
-  margin: 130px auto 0;
+  margin: 50% auto 0;
   overflow: hidden;
   text-indent: 100%;
   white-space: nowrap;
   width: 36px;
 }
+
+
 
 .hidden {
   display: none;

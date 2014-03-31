@@ -84,7 +84,8 @@ function (
 
       this.window = options.window || window;
 
-      this.$stage = $('#stage');
+      this.$contents = $('#contents');
+      this.$spinner = $('.spinner-container');
 
       this.watchAnchors();
     },
@@ -134,12 +135,13 @@ function (
           // Render the new view and explicitly set the `display: block`
           // using .css. When embedded in about:accounts, the content
           // is not yet visible and show will not display the element.
-          self.$stage.html(viewToShow.el).css('display', 'block');
+          self.$contents.html(viewToShow.el).css('display', 'block');
           viewToShow.afterVisible();
 
           // The user may be scrolled part way down the page
           // on screen transition. Force them to the top of the page.
           self.window.scrollTo(0, 0);
+          self.$spinner.hide();
 
           self.$logo = $('#fox-logo');
           var name = self.currentView.el.className;

@@ -26,7 +26,7 @@ function (chai, _, Backbone, Router, SignInView, SignUpView, Session, WindowMock
     beforeEach(function () {
       navigateUrl = navigateOptions = null;
 
-      $('#container').html('<div id="stage"></div>');
+      $('#container').html('<div class="spinner-container">&nbsp;</div><div id="contents"></div>');
 
       windowMock = new WindowMock();
       router = new Router({
@@ -81,7 +81,7 @@ function (chai, _, Backbone, Router, SignInView, SignUpView, Session, WindowMock
       });
     });
 
-    describe('showView, then another showView', function () {
+    describe('showView', function () {
       var signInView, signUpView;
 
       beforeEach(function () {
@@ -105,6 +105,29 @@ function (chai, _, Backbone, Router, SignInView, SignUpView, Session, WindowMock
             })
             .then(function () {
               assert.ok($('#fxa-signup-header').length);
+              // if there is a back button, it can be shown now.
+              assert.equal(Session.canGoBack, true);
+            });
+      });
+
+      it('shows a view and hides the spinner-container', function () {
+        return router.showView(signInView)
+            .then(function () {
+              assert.ok($('#fxa-signin-header').length);
+              assert.isFalse($('.spinner-container').is(':visible'));
+            });
+      });
+
+      it('sets Session.canGoBack after >= 2 views', function () {
+        return router.showView(signInView)
+            .then(function () {
+              // session was cleared in beforeEach, simulating a user
+              // visiting their first page. The user cannot go back.
+              assert.equal(Session.canGoBack, false);
+
+              return router.showView(signUpView);
+            })
+            .then(function () {
               // if there is a back button, it can be shown now.
               assert.equal(Session.canGoBack, true);
             });
