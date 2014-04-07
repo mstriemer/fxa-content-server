@@ -7,23 +7,36 @@
 
 define([
   'chai',
+  'p-promise',
   'views/complete_reset_password',
+  '../../mocks/router',
   '../../mocks/window',
   '../../lib/helpers'
 ],
-function (chai, View, WindowMock, TestHelpers) {
+function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
+  /*global describe, beforeEach, afterEach, it*/
   var assert = chai.assert;
   var wrapAssertion = TestHelpers.wrapAssertion;
 
   describe('views/complete_reset_password', function () {
-    var view, windowMock;
+    var view, routerMock, windowMock, isPasswordResetComplete;
 
     beforeEach(function () {
+      routerMock = new RouterMock();
+
       windowMock = new WindowMock();
+      windowMock.location.search = '?code=code&email=testuser@testuser.com&token=token';
 
       view = new View({
+        router: routerMock,
         window: windowMock
       });
+
+      // mock in isPasswordResetComplete
+      isPasswordResetComplete = false;
+      view.fxaClient.isPasswordResetComplete = function () {
+        return p(isPasswordResetComplete);
+      };
 
       return view.render()
           .then(function () {
@@ -37,34 +50,40 @@ function (chai, View, WindowMock, TestHelpers) {
       view = windowMock = null;
     });
 
-    describe('constructor creates it', function () {
-      it('is drawn', function () {
-        assert.ok($('#fxa-complete-reset-password-header').length);
-      });
-    });
-
     describe('render', function () {
-      it('shows an error if the token is missing', function () {
+      it('shows form if token, code and email are all present', function () {
+        assert.ok(view.$('#fxa-complete-reset-password-header').length);
+      });
+
+      it('shows error screen if the token is missing', function () {
         windowMock.location.search = '?code=code&email=testuser@testuser.com';
         return view.render()
             .then(function () {
-              assert.ok(view.$('.error').text());
+              assert.ok(view.$('#fxa-verification-link-damaged-header').length);
             });
       });
 
-      it('shows an error if the code is missing', function () {
+      it('shows error screen if the code is missing', function () {
         windowMock.location.search = '?token=token&email=testuser@testuser.com';
         return view.render()
             .then(function () {
-              assert.ok(view.$('.error').text());
+              assert.ok(view.$('#fxa-verification-link-damaged-header').length);
             });
       });
 
-      it('shows an error if the email is missing', function () {
+      it('shows error screen if the email is missing', function () {
         windowMock.location.search = '?token=token&code=code';
         return view.render()
             .then(function () {
-              assert.ok(view.$('.error').text());
+              assert.ok(view.$('#fxa-verification-link-damaged-header').length);
+            });
+      });
+
+      it('shows an error if the token has already been verified', function () {
+        isPasswordResetComplete = true;
+        return view.render()
+            .then(function () {
+              assert.ok(view.$('#fxa-verification-link-expired-header').length);
             });
       });
     });
@@ -85,52 +104,27 @@ function (chai, View, WindowMock, TestHelpers) {
     });
 
     describe('isValid', function () {
-      it('returns true if token, code, email, password, vpassword available, password & vpassword valid and the same', function () {
-        view.token = view.code = view.email = 'passed_in_on_url';
+      it('returns true if password & vpassword valid and the same', function () {
         view.$('#password').val('password');
         view.$('#vpassword').val('password');
         assert.isTrue(view.isValid());
       });
 
-      it('returns false if token, code, email, password, vpassword available, password & vpassword valid are different', function () {
-        view.token = view.code = view.email = 'passed_in_on_url';
+      it('returns false if password & vpassword are different', function () {
         view.$('#password').val('password');
         view.$('#vpassword').val('other_password');
         assert.isFalse(view.isValid());
       });
 
-      it('returns false if token, code, email, password, vpassword available, password invalid', function () {
-        view.token = view.code = view.email = 'passed_in_on_url';
+      it('returns false if password invalid', function () {
         view.$('#password').val('passwor');
         view.$('#vpassword').val('password');
         assert.isFalse(view.isValid());
       });
 
-      it('returns false if token, code, email, password, vpassword available, vpassword invalid', function () {
-        view.token = view.code = view.email = 'passed_in_on_url';
+      it('returns false if vpassword invalid', function () {
         view.$('#password').val('password');
         view.$('#vpassword').val('passwor');
-        assert.isFalse(view.isValid());
-      });
-
-      it('returns false if email missing', function () {
-        view.token = view.code = 'passed_in_on_url';
-        view.$('#password').val('password');
-        view.$('#vpassword').val('password');
-        assert.isFalse(view.isValid());
-      });
-
-      it('returns false if code missing', function () {
-        view.token = view.email = 'passed_in_on_url';
-        view.$('#password').val('password');
-        view.$('#vpassword').val('password');
-        assert.isFalse(view.isValid());
-      });
-
-      it('returns false if token missing', function () {
-        view.code = view.email = 'passed_in_on_url';
-        view.$('#password').val('password');
-        view.$('#vpassword').val('password');
         assert.isFalse(view.isValid());
       });
     });
@@ -163,21 +157,46 @@ function (chai, View, WindowMock, TestHelpers) {
       });
     });
 
-    describe('submit', function() {
-      it('shows an error if passwords are the same', function (done) {
+    describe('validateAndSubmit', function() {
+      it('shows an error if passwords are different', function () {
         view.$('#password').val('password1');
         view.$('#vpassword').val('password2');
 
-        view.on('error', function() {
-          done();
-        });
-
-        view.submit();
+        return view.validateAndSubmit()
+            .then(function () {
+              assert(false, 'unexpected success');
+            }, function () {
+              assert.ok(view.$('.error').text().length);
+            });
       });
 
-      it('submits if passwords are the same', function () {
+      it('redirects to reset_password_complete if all is well', function () {
         view.$('[type=password]').val('password');
-        view.submit();
+
+        view.fxaClient.completePasswordReset = function () {
+          return p(true);
+        };
+        return view.validateAndSubmit()
+            .then(function () {
+              assert.equal(routerMock.page, 'reset_password_complete');
+            });
+      });
+
+      it('shows error message if server returns an error', function () {
+        view.$('[type=password]').val('password');
+
+        view.fxaClient.completePasswordReset = function () {
+          return p()
+              .then(function () {
+                throw new Error('uh oh');
+              });
+        };
+        return view.validateAndSubmit()
+            .then(function () {
+              assert(false, 'unexpected success');
+            }, function () {
+              assert.ok(view.$('.error').text().length);
+            });
       });
     });
   });

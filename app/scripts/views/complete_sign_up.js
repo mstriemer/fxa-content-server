@@ -10,52 +10,47 @@ define([
   'views/base',
   'stache!templates/complete_sign_up',
   'lib/fxa-client',
-  'lib/url'
+  'lib/auth-errors'
 ],
-function (_, FormView, BaseView, CompleteSignUpTemplate, FxaClient, Url) {
-  var t = BaseView.t;
-
+function (_, FormView, BaseView, CompleteSignUpTemplate, FxaClient, authErrors) {
   var CompleteSignUpView = FormView.extend({
     template: CompleteSignUpTemplate,
     className: 'complete_sign_up',
 
-    afterRender: function () {
-
-      var completeEl = this.$el;
-      var completeElHeight = completeEl.height();
-      var completeElChildren = completeEl.children();
-      completeElChildren.hide();
-      completeEl.height(completeElHeight);
-
-      var searchParams = this.window.location.search;
-      var uid = Url.searchParam('uid', searchParams);
-      if (! uid) {
-        completeElChildren.show();
-        return this.displayError(t('No uid specified'));
-      }
-
-      var code = Url.searchParam('code', searchParams);
-      if (! code) {
-        completeElChildren.show();
-        return this.displayError(t('No code specified'));
+    beforeRender: function () {
+      this._isLinkDamaged = false;
+      try {
+        this.importSearchParam('uid');
+        this.importSearchParam('code');
+      } catch(e) {
+        // the template will print the title and error, the rest
+        // of the form will be blank.
+        this._isLinkDamaged = true;
+        return true;
       }
 
       var self = this;
-      return this.fxaClient.verifyCode(uid, code)
-            .then(function () {
-              self.navigate('signup_complete');
+      return this.fxaClient.verifyCode(this.uid, this.code)
+          .then(function () {
+            self.navigate('signup_complete');
+            return false;
+          })
+          .then(null, function (err) {
+            if (authErrors.is(err, 'INVALID_PARAMETER')) {
+              self._isLinkDamaged = true;
+            } else {
+              self._error = self.translateError(err);
+            }
+          });
+    },
 
-              self.trigger('verify_code_complete');
-            })
-            .then(null, function (err) {
-
-              self.displayError(err);
-
-              completeElChildren.show();
-              self.trigger('verify_code_complete');
-            });
+    context: function () {
+      return {
+        // If the link is invalid, print a special error message.
+        isLinkDamaged: this._isLinkDamaged,
+        error: this._error
+      };
     }
-
   });
 
   return CompleteSignUpView;

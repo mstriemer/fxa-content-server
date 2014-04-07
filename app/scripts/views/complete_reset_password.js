@@ -10,10 +10,9 @@ define([
   'views/form',
   'stache!templates/complete_reset_password',
   'lib/session',
-  'lib/url',
   'lib/password-mixin'
 ],
-function (_, BaseView, FormView, Template, Session, Url, PasswordMixin) {
+function (_, BaseView, FormView, Template, Session, PasswordMixin) {
   var t = BaseView.t;
 
   var View = FormView.extend({
@@ -24,35 +23,41 @@ function (_, BaseView, FormView, Template, Session, Url, PasswordMixin) {
       'change .show-password': 'onPasswordVisibilityChange'
     },
 
+    // beforeRender is asynchronous and returns a promise. Only render
+    // after beforeRender has finished its business.
+    beforeRender: function () {
+      this._isLinkDamaged = false;
+      try {
+        this.importSearchParam('token');
+        this.importSearchParam('code');
+        this.importSearchParam('email');
+      } catch(e) {
+        // the template will print the title and error, the rest
+        // of the form will be blank.
+        this._isLinkDamaged = true;
+        return true;
+      }
+
+      var self = this;
+      return this.fxaClient.isPasswordResetComplete(this.token)
+         .then(function (isComplete) {
+            self._isLinkExpired = isComplete;
+            return true;
+          });
+    },
+
     context: function () {
       return {
-        isSync: Session.service === 'sync'
+        isSync: Session.service === 'sync',
+        // If the link is invalid, print a special error message.
+        isLinkDamaged: this._isLinkDamaged,
+        isLinkExpired: this._isLinkExpired,
+        isLinkValid: !(this._isLinkDamaged || this._isLinkExpired)
       };
     },
 
-    afterRender: function () {
-      var search = this.window.location.search;
-      this.token = Url.searchParam('token', search);
-      if (! this.token) {
-        return this.displayError(t('No token specified'));
-      }
-
-      this.code = Url.searchParam('code', search);
-      if (! this.code) {
-        return this.displayError(t('No code specified'));
-      }
-
-      this.email = Url.searchParam('email', search);
-      if (! this.email) {
-        return this.displayError(t('No email specified'));
-      }
-    },
-
     isValidEnd: function () {
-      return !! (this.token &&
-                 this.code &&
-                 this.email &&
-                 this._getPassword() === this._getVPassword());
+      return this._getPassword() === this._getVPassword();
     },
 
     showValidationErrorsEnd: function () {
@@ -64,17 +69,11 @@ function (_, BaseView, FormView, Template, Session, Url, PasswordMixin) {
     submit: function () {
       var password = this._getPassword();
 
+      var self = this;
       return this.fxaClient.completePasswordReset(this.email, password, this.token, this.code)
-                .done(_.bind(this._onResetCompleteSuccess, this),
-                      _.bind(this._onResetCompleteFailure, this));
-    },
-
-    _onResetCompleteSuccess: function () {
-      this.navigate('reset_password_complete');
-    },
-
-    _onResetCompleteFailure: function (err) {
-      this.displayError(err);
+          .then(function () {
+            self.navigate('reset_password_complete');
+          });
     },
 
     _getPassword: function () {

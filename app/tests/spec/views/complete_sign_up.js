@@ -7,81 +7,98 @@
 
 define([
   'chai',
+  'p-promise',
   'views/complete_sign_up',
-  '../../mocks/window',
-  '../../lib/helpers'
+  'lib/auth-errors',
+  '../../mocks/router',
+  '../../mocks/window'
 ],
-function (chai, View, WindowMock, TestHelpers) {
+function (chai, p, View, authErrors, RouterMock, WindowMock) {
   /*global describe, beforeEach, afterEach, it*/
   var assert = chai.assert;
-  var wrapAssertion = TestHelpers.wrapAssertion;
 
   describe('views/complete_sign_up', function () {
-    var view, windowMock, client;
+    var view, routerMock, windowMock, verificationError;
 
     beforeEach(function () {
+      routerMock = new RouterMock();
       windowMock = new WindowMock();
+
       view = new View({
+        router: routerMock,
         window: windowMock
       });
-      $('#container').html(view.el);
-      return view.fxaClient._getClientAsync()
-              .then(function (_client) {
-                client = _client;
-                // create spies that can be used to check
-                // parameters that are passed to the Fxaclient
-                TestHelpers.addFxaClientSpy(client);
-              });
+
+      verificationError = null;
+      view.fxaClient.verifyCode = function () {
+        view.fxaClient.verifyCode.called = true;
+        return p().then(function () {
+          if (verificationError) {
+            throw verificationError;
+          }
+        });
+      };
+      view.fxaClient.verifyCode.called = false;
     });
 
     afterEach(function () {
       view.remove();
       view.destroy();
       view = windowMock = null;
-
-      // return the client to its original state.
-      TestHelpers.removeFxaClientSpy(client);
     });
 
-    describe('constructor creates it', function () {
-      it('is drawn', function () {
-        windowMock.location.search = '?uid=uid&code=code';
-        return view.render()
-            .then(function () {
-              assert.ok(view.$('#fxa-complete-sign-up-header').length);
-            });
-      });
-    });
-
-    describe('afterRender', function () {
+    describe('render', function () {
       it('shows an error if uid is not available on the URL', function () {
         windowMock.location.search = '?code=code';
 
         return view.render()
             .then(function () {
-              assert.isFalse(client.verifyCode.called);
-              assert.ok(view.$('.error').text());
+              assert.isFalse(view.fxaClient.verifyCode.called);
+              assert.ok(view.$('#fxa-verification-link-damaged-header').length);
             });
       });
 
-      it('throws an error if code is not available on the URL', function () {
+      it('shows an error if code is not available on the URL', function () {
         windowMock.location.search = '?uid=uid';
 
         return view.render()
             .then(function () {
-              assert.isFalse(client.verifyCode.called);
-              assert.ok(view.$('.error').text());
+              assert.isFalse(view.fxaClient.verifyCode.called);
+              assert.ok(view.$('#fxa-verification-link-damaged-header').length);
             });
       });
 
-      it('attempts to complete verification if code and uid are available', function () {
+      it('redirects to /signup_complete if verification successful', function () {
         windowMock.location.search = '?code=code&uid=uid';
 
         return view.render()
             .then(function () {
-              assert.isTrue(client.verifyCode.called);
+              assert.isTrue(view.fxaClient.verifyCode.called);
+              assert.equal(routerMock.page, 'signup_complete');
             });
+      });
 
+      it('bad code/uid errors display the verification link damaged screen', function () {
+        windowMock.location.search = '?code=code&uid=uid';
+
+        verificationError = authErrors.toError('INVALID_PARAMETER', 'code');
+        return view.render()
+            .then(function () {
+              assert.isTrue(view.fxaClient.verifyCode.called);
+              assert.ok(view.$('#fxa-verification-link-damaged-header').length);
+            });
+      });
+
+      it('all other server errors are displayed', function () {
+        windowMock.location.search = '?code=code&uid=uid';
+
+        verificationError = new Error('verification error');
+        return view.render()
+            .then(function () {
+              assert.isTrue(view.fxaClient.verifyCode.called);
+              assert.ok(view.$('#fxa-verification-error-header').length);
+              assert.equal(view.$('.error').text(), 'verification error');
+            });
       });
     });
   });
