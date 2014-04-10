@@ -10,9 +10,10 @@ define([
   'views/form',
   'stache!templates/complete_reset_password',
   'lib/session',
-  'lib/password-mixin'
+  'lib/password-mixin',
+  'lib/validate'
 ],
-function (_, BaseView, FormView, Template, Session, PasswordMixin) {
+function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate) {
   var t = BaseView.t;
 
   var View = FormView.extend({
@@ -26,15 +27,19 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin) {
     // beforeRender is asynchronous and returns a promise. Only render
     // after beforeRender has finished its business.
     beforeRender: function () {
-      this._isLinkDamaged = false;
       try {
         this.importSearchParam('token');
         this.importSearchParam('code');
         this.importSearchParam('email');
       } catch(e) {
-        // the template will print the title and error, the rest
-        // of the form will be blank.
-        this._isLinkDamaged = true;
+        // This is an invalid link. Abort and show an error message
+        // before doing any more checks.
+        return true;
+      }
+
+      if (! this.doesLinkValidate()) {
+        // One or more parameters fails validation. Abort and show an
+        // error message before doing any more checks.
         return true;
       }
 
@@ -46,13 +51,22 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin) {
           });
     },
 
+    doesLinkValidate: function () {
+      return Validate.isTokenValid(this.token) &&
+             Validate.isCodeValid(this.code) &&
+             Validate.isEmailValid(this.email);
+    },
+
     context: function () {
+      var doesLinkValidate = this.doesLinkValidate();
+      var isLinkExpired = this._isLinkExpired;
+
+      // damaged and expired links have special messages.
       return {
         isSync: Session.service === 'sync',
-        // If the link is invalid, print a special error message.
-        isLinkDamaged: this._isLinkDamaged,
-        isLinkExpired: this._isLinkExpired,
-        isLinkValid: !(this._isLinkDamaged || this._isLinkExpired)
+        isLinkDamaged: ! doesLinkValidate,
+        isLinkExpired: isLinkExpired,
+        isLinkValid: doesLinkValidate && ! isLinkExpired
       };
     },
 

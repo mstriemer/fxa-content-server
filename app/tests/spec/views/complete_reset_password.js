@@ -25,7 +25,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
       routerMock = new RouterMock();
 
       windowMock = new WindowMock();
-      windowMock.location.search = '?code=code&email=testuser@testuser.com&token=token';
+      windowMock.location.search = '?code=dea0fae1abc2fab3bed4dec5eec6ace7&email=testuser@testuser.com&token=feed';
 
       view = new View({
         router: routerMock,
@@ -56,7 +56,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
       });
 
       it('shows error screen if the token is missing', function () {
-        windowMock.location.search = '?code=code&email=testuser@testuser.com';
+        windowMock.location.search = '?code=faea&email=testuser@testuser.com';
         return view.render()
             .then(function () {
               assert.ok(view.$('#fxa-verification-link-damaged-header').length);
@@ -64,7 +64,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
       });
 
       it('shows error screen if the code is missing', function () {
-        windowMock.location.search = '?token=token&email=testuser@testuser.com';
+        windowMock.location.search = '?token=feed&email=testuser@testuser.com';
         return view.render()
             .then(function () {
               assert.ok(view.$('#fxa-verification-link-damaged-header').length);
@@ -72,7 +72,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
       });
 
       it('shows error screen if the email is missing', function () {
-        windowMock.location.search = '?token=token&code=code';
+        windowMock.location.search = '?token=feed&code=dea0fae1abc2fab3bed4dec5eec6ace7';
         return view.render()
             .then(function () {
               assert.ok(view.$('#fxa-verification-link-damaged-header').length);

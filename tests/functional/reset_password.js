@@ -25,10 +25,26 @@ define([
   var token;
   var client;
 
+  function createRandomHexString(length) {
+    var str = '';
+    var lettersToChooseFrom = 'abcdefABCDEF01234567890';
+    var numberOfPossibilities = lettersToChooseFrom.length;
+
+    for (var i = 0; i < length; ++i) {
+      var indexToUse = Math.floor(Math.random() * numberOfPossibilities);
+      str += lettersToChooseFrom.charAt(indexToUse);
+    }
+
+    return str;
+  }
+
   registerSuite({
     name: 'reset_password same browser flow',
 
     setup: function () {
+      // timeout after 90 seconds
+      this.timeout = 90000;
+
       user = 'signin' + Math.random();
       email = user + '@restmail.net';
       client = new FxaClient(AUTH_SERVER_ROOT, {
@@ -99,10 +115,82 @@ define([
         });
     },
 
-    'open complete page': function () {
-      // timeout after 90 seconds
-      this.timeout = 90000;
+    'open complete page with missing token shows damaged screen': function () {
+      var url = COMPLETE_PAGE_URL_ROOT + '?code=' + code + '&email=' + encodeURIComponent(email);
 
+      return this.get('remote')
+        .get(require.toUrl(url))
+        .waitForElementById('fxa-verification-link-damaged-header')
+
+        .end();
+    },
+
+    'open complete page with malformed token shows damaged screen': function () {
+      var malformedToken = createRandomHexString(token.length - 1);
+      var url = COMPLETE_PAGE_URL_ROOT + '?token=' + malformedToken + '&code=' + code + '&email=' + encodeURIComponent(email);
+
+      return this.get('remote')
+        .get(require.toUrl(url))
+        .waitForElementById('fxa-verification-link-damaged-header')
+
+        .end();
+    },
+
+    'open complete page with invalid token shows expired screen': function () {
+      var invalidToken = createRandomHexString(token.length);
+
+      var url = COMPLETE_PAGE_URL_ROOT + '?token=' + invalidToken + '&code=' + code + '&email=' + encodeURIComponent(email);
+
+      return this.get('remote')
+        .get(require.toUrl(url))
+        .waitForElementById('fxa-verification-link-expired-header')
+
+        .end();
+    },
+
+    'open complete page with missing code shows damaged screen': function () {
+      var url = COMPLETE_PAGE_URL_ROOT + '?token=' + token + '&email=' + encodeURIComponent(email);
+
+      return this.get('remote')
+        .get(require.toUrl(url))
+        .waitForElementById('fxa-verification-link-damaged-header')
+
+        .end();
+    },
+
+    'open complete page with malformed code shows damanged screen': function () {
+      var malformedCode = createRandomHexString(code.length - 1);
+
+      var url = COMPLETE_PAGE_URL_ROOT + '?token=' + token + '&code=' + malformedCode + '&email=' + encodeURIComponent(email);
+
+      return this.get('remote')
+        .get(require.toUrl(url))
+        .waitForElementById('fxa-verification-link-damaged-header')
+
+        .end();
+    },
+
+    'open complete page with missing email shows damaged screen': function () {
+      var url = COMPLETE_PAGE_URL_ROOT + '?token=' + token + '&code=' + code;
+
+      return this.get('remote')
+        .get(require.toUrl(url))
+        .waitForElementById('fxa-verification-link-damaged-header')
+
+        .end();
+    },
+
+    'open complete page with malformed email shows damaged screen': function () {
+      var url = COMPLETE_PAGE_URL_ROOT + '?token=' + token + '&code=' + code + '&email=invalidemail';
+
+      return this.get('remote')
+        .get(require.toUrl(url))
+        .waitForElementById('fxa-verification-link-damaged-header')
+
+        .end();
+    },
+
+    'open complete page with valid parameters': function () {
       var url = COMPLETE_PAGE_URL_ROOT + '?token=' + token + '&code=' + code + '&email=' + encodeURIComponent(email);
 
       return this.get('remote')
