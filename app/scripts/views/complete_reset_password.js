@@ -39,7 +39,7 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate, aut
         return true;
       }
 
-      if (! this.doesLinkValidate()) {
+      if (! this._doesLinkValidate()) {
         // One or more parameters fails validation. Abort and show an
         // error message before doing any more checks.
         return true;
@@ -53,14 +53,14 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate, aut
           });
     },
 
-    doesLinkValidate: function () {
+    _doesLinkValidate: function () {
       return Validate.isTokenValid(this.token) &&
              Validate.isCodeValid(this.code) &&
              Validate.isEmailValid(this.email);
     },
 
     context: function () {
-      var doesLinkValidate = this.doesLinkValidate();
+      var doesLinkValidate = this._doesLinkValidate();
       var isLinkExpired = this._isLinkExpired;
 
       // damaged and expired links have special messages.
@@ -89,6 +89,15 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate, aut
       return this.fxaClient.completePasswordReset(this.email, password, this.token, this.code)
           .then(function () {
             self.navigate('reset_password_complete');
+          }, function (err) {
+            if (authErrors.is(err, 'INVALID_TOKEN')) {
+              // The token has expired since the first check, re-render to
+              // show a screen that allows the user to receive a new link.
+              return self.render();
+            }
+
+            // all other errors are unexpected, bail.
+            throw err;
           });
     },
 

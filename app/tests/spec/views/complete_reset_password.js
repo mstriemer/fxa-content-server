@@ -8,12 +8,13 @@
 define([
   'chai',
   'p-promise',
+  'lib/auth-errors',
   'views/complete_reset_password',
   '../../mocks/router',
   '../../mocks/window',
   '../../lib/helpers'
 ],
-function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
+function (chai, p, authErrors, View, RouterMock, WindowMock, TestHelpers) {
   /*global describe, beforeEach, afterEach, it*/
   var assert = chai.assert;
   var wrapAssertion = TestHelpers.wrapAssertion;
@@ -178,6 +179,29 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
         return view.validateAndSubmit()
             .then(function () {
               assert.equal(routerMock.page, 'reset_password_complete');
+            });
+      });
+
+      it('reload view to allow user to resend an email on INVALID_TOKEN error', function () {
+        view.$('[type=password]').val('password');
+
+        view.fxaClient.completePasswordReset = function () {
+          return p()
+              .then(function () {
+                throw authErrors.toError('INVALID_TOKEN', 'invalid token, man');
+              });
+        };
+        // isPasswordResetComplete needs to be overridden as well for when
+        // render is re-loaded the token needs to be expired.
+        view.fxaClient.isPasswordResetComplete = function () {
+          return p()
+              .then(function () {
+                return true;
+              });
+        };
+        return view.validateAndSubmit()
+            .then(function () {
+              assert.ok(view.$('#fxa-verification-link-expired-header').length);
             });
       });
 
