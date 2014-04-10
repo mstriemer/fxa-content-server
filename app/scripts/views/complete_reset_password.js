@@ -11,9 +11,10 @@ define([
   'stache!templates/complete_reset_password',
   'lib/session',
   'lib/password-mixin',
-  'lib/validate'
+  'lib/validate',
+  'lib/auth-errors'
 ],
-function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate) {
+function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate, authErrors) {
   var t = BaseView.t;
 
   var View = FormView.extend({
@@ -21,7 +22,8 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate) {
     className: 'complete_reset_password',
 
     events: {
-      'change .show-password': 'onPasswordVisibilityChange'
+      'change .show-password': 'onPasswordVisibilityChange',
+      'click #resend': BaseView.preventDefaultThen('resendResetEmail')
     },
 
     // beforeRender is asynchronous and returns a promise. Only render
@@ -96,6 +98,16 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate) {
 
     _getVPassword: function () {
       return this.$('#vpassword').val();
+    },
+
+    resendResetEmail: function () {
+      var self = this;
+      return this.fxaClient.passwordReset(this.email)
+              .then(function () {
+                self.navigate('confirm_reset_password');
+              }, function (err) {
+                self.displayError(err);
+              });
     }
   });
 

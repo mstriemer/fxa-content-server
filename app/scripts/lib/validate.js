@@ -4,7 +4,9 @@
 
 // Do some validation.
 
-define([], function () {
+define([
+  'lib/constants'
+], function (Constants) {
   'use strict';
 
   // taken from the fxa-auth-server
@@ -62,8 +64,8 @@ define([], function () {
         return false;
       }
 
-      // codes are 32 characters hex strings.
-      return code.length === 32 &&
+      // codes are fixed length hex strings.
+      return code.length === Constants.RESET_PASSWORD_CODE_LENGTH &&
              HEX_STRING.test(code);
     }
   };

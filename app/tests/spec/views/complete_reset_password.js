@@ -23,7 +23,6 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
 
     beforeEach(function () {
       routerMock = new RouterMock();
-
       windowMock = new WindowMock();
       windowMock.location.search = '?code=dea0fae1abc2fab3bed4dec5eec6ace7&email=testuser@testuser.com&token=feed';
 
@@ -55,7 +54,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
         assert.ok(view.$('#fxa-complete-reset-password-header').length);
       });
 
-      it('shows error screen if the token is missing', function () {
+      it('shows malformed screen if the token is missing', function () {
         windowMock.location.search = '?code=faea&email=testuser@testuser.com';
         return view.render()
             .then(function () {
@@ -63,7 +62,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
             });
       });
 
-      it('shows error screen if the code is missing', function () {
+      it('shows malformed screen if the code is missing', function () {
         windowMock.location.search = '?token=feed&email=testuser@testuser.com';
         return view.render()
             .then(function () {
@@ -71,7 +70,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
             });
       });
 
-      it('shows error screen if the email is missing', function () {
+      it('shows malformed screen if the email is missing', function () {
         windowMock.location.search = '?token=feed&code=dea0fae1abc2fab3bed4dec5eec6ace7';
         return view.render()
             .then(function () {
@@ -79,7 +78,7 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
             });
       });
 
-      it('shows an error if the token has already been verified', function () {
+      it('shows the expired screen if the token has already been verified', function () {
         isPasswordResetComplete = true;
         return view.render()
             .then(function () {
@@ -196,6 +195,34 @@ function (chai, p, View, RouterMock, WindowMock, TestHelpers) {
               assert(false, 'unexpected success');
             }, function () {
               assert.ok(view.$('.error').text().length);
+            });
+      });
+    });
+
+    describe('resendResetEmail', function() {
+      it('redirects to /confirm_reset_password if auth server is happy', function () {
+        view.fxaClient.passwordReset = function (email) {
+          assert.equal(email, 'testuser@testuser.com');
+          return p(true);
+        };
+
+        return view.resendResetEmail()
+            .then(function () {
+              assert.equal(routerMock.page, 'confirm_reset_password');
+            });
+      });
+
+      it('shows server response as an error otherwise', function () {
+        view.fxaClient.passwordReset = function (email) {
+          return p()
+              .then(function () {
+                throw new Error('server error');
+              });
+        };
+
+        return view.resendResetEmail()
+            .then(function () {
+              assert.equal(view.$('.error').text(), 'server error');
             });
       });
     });
