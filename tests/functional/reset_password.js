@@ -9,8 +9,9 @@ define([
   'intern/node_modules/dojo/node!xmlhttprequest',
   'app/bower_components/fxa-js-client/fxa-client',
   'intern/node_modules/dojo/Deferred',
-  'tests/lib/restmail'
-], function (registerSuite, assert, require, nodeXMLHttpRequest, FxaClient, Deferred, restmail) {
+  'tests/lib/restmail',
+  'tests/lib/helpers',
+], function (registerSuite, assert, require, nodeXMLHttpRequest, FxaClient, Deferred, restmail, TestHelpers) {
   'use strict';
 
   var AUTH_SERVER_ROOT = 'http://127.0.0.1:9000/v1';
@@ -25,18 +26,7 @@ define([
   var token;
   var client;
 
-  function createRandomHexString(length) {
-    var str = '';
-    var lettersToChooseFrom = 'abcdefABCDEF01234567890';
-    var numberOfPossibilities = lettersToChooseFrom.length;
-
-    for (var i = 0; i < length; ++i) {
-      var indexToUse = Math.floor(Math.random() * numberOfPossibilities);
-      str += lettersToChooseFrom.charAt(indexToUse);
-    }
-
-    return str;
-  }
+  var createRandomHexString = TestHelpers.createRandomHexString;
 
   function setTokenAndCodeFromEmail(user, emailNumber) {
     var fetchCount = emailNumber + 1;

@@ -45,6 +45,19 @@ define([
     },
 
     /**
+     * Check if a verification code is valid
+     */
+    isCodeValid: function (code) {
+      if (typeof code !== 'string') {
+        return false;
+      }
+
+      // codes are fixed length hex strings.
+      return code.length === Constants.CODE_LENGTH &&
+             HEX_STRING.test(code);
+    },
+
+    /**
      * Check if a verification token is valid
      */
     isTokenValid: function (token) {
@@ -57,16 +70,16 @@ define([
     },
 
     /**
-     * Check if a verification code is valid
+     * Check if a verification uid is valid
      */
-    isCodeValid: function (code) {
-      if (typeof code !== 'string') {
+    isUidValid: function(uid) {
+      if (typeof uid !== 'string') {
         return false;
       }
 
-      // codes are fixed length hex strings.
-      return code.length === Constants.RESET_PASSWORD_CODE_LENGTH &&
-             HEX_STRING.test(code);
+      // uids are fixed length hex strings.
+      return uid.length === Constants.UID_LENGTH &&
+             HEX_STRING.test(uid);
     }
   };
 });

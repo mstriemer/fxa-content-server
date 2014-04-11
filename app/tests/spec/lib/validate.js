@@ -9,24 +9,14 @@ define([
   'chai',
   'underscore',
   'lib/validate',
-  'lib/constants'
+  'lib/constants',
+  '../../lib/helpers',
 ],
-function (chai, _, Validate, Constants) {
+function (chai, _, Validate, Constants, TestHelpers) {
   var assert = chai.assert;
   var channel;
 
-  function createRandomHexString(length) {
-    var str = '';
-    var lettersToChooseFrom = 'abcdefABCDEF01234567890';
-    var numberOfPossibilities = lettersToChooseFrom.length;
-
-    for (var i = 0; i < length; ++i) {
-      var indexToUse = Math.floor(Math.random() * numberOfPossibilities);
-      str += lettersToChooseFrom.charAt(indexToUse);
-    }
-
-    return str;
-  }
+  var createRandomHexString = TestHelpers.createRandomHexString;
 
   describe('lib/validate', function () {
     describe('isEmailValid', function () {
@@ -71,15 +61,37 @@ function (chai, _, Validate, Constants) {
       });
 
       it('returns false for one too few characters', function () {
-        assert.isFalse(Validate.isCodeValid(createRandomHexString(Constants.RESET_PASSWORD_CODE_LENGTH - 1)));
+        assert.isFalse(Validate.isCodeValid(createRandomHexString(Constants.CODE_LENGTH - 1)));
       });
 
       it('returns false for one too many characters', function () {
-        assert.isFalse(Validate.isCodeValid(createRandomHexString(Constants.RESET_PASSWORD_CODE_LENGTH + 1)));
+        assert.isFalse(Validate.isCodeValid(createRandomHexString(Constants.CODE_LENGTH + 1)));
       });
 
       it('returns true for just the right number', function () {
-        assert.isTrue(Validate.isCodeValid(createRandomHexString(Constants.RESET_PASSWORD_CODE_LENGTH)));
+        assert.isTrue(Validate.isCodeValid(createRandomHexString(Constants.CODE_LENGTH)));
+      });
+    });
+
+    describe('isUidValid', function () {
+      it('returns false for non-hex value', function () {
+        assert.isFalse(Validate.isUidValid('this is a normal string'));
+      });
+
+      it('returns false for an empty string', function () {
+        assert.isFalse(Validate.isUidValid(''));
+      });
+
+      it('returns false for one too few characters', function () {
+        assert.isFalse(Validate.isUidValid(createRandomHexString(Constants.UID_LENGTH - 1)));
+      });
+
+      it('returns false for one too many characters', function () {
+        assert.isFalse(Validate.isUidValid(createRandomHexString(Constants.UID_LENGTH + 1)));
+      });
+
+      it('returns true for just the right number', function () {
+        assert.isTrue(Validate.isUidValid(createRandomHexString(Constants.UID_LENGTH)));
       });
     });
   });

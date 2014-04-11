@@ -10,22 +10,27 @@ define([
   'views/base',
   'stache!templates/complete_sign_up',
   'lib/fxa-client',
-  'lib/auth-errors'
+  'lib/auth-errors',
+  'lib/validate'
 ],
-function (_, FormView, BaseView, CompleteSignUpTemplate, FxaClient, authErrors) {
+function (_, FormView, BaseView, CompleteSignUpTemplate, FxaClient, authErrors, Validate) {
   var CompleteSignUpView = FormView.extend({
     template: CompleteSignUpTemplate,
     className: 'complete_sign_up',
 
     beforeRender: function () {
-      this._isLinkDamaged = false;
       try {
         this.importSearchParam('uid');
         this.importSearchParam('code');
       } catch(e) {
-        // the template will print the title and error, the rest
-        // of the form will be blank.
-        this._isLinkDamaged = true;
+        // This is an invalid link. Abort and show an error message
+        // before doing any more checks.
+        return true;
+      }
+
+      if (! this._doesLinkValidate()) {
+        // One or more parameters fails validation. Abort and show an
+        // error message before doing any more checks.
         return true;
       }
 
@@ -36,18 +41,31 @@ function (_, FormView, BaseView, CompleteSignUpTemplate, FxaClient, authErrors) 
             return false;
           })
           .then(null, function (err) {
-            if (authErrors.is(err, 'INVALID_PARAMETER')) {
+            if (authErrors.is(err, 'UNKNOWN_ACCOUNT') ||
+                authErrors.is(err, 'INVALID_VERIFICATION_CODE') ||
+                authErrors.is(err, 'INVALID_PARAMETER')) {
+              // These errors show a link damaged screen
               self._isLinkDamaged = true;
             } else {
+              // all other errors show the standard error box.
               self._error = self.translateError(err);
             }
+            return true;
           });
     },
 
+    _doesLinkValidate: function () {
+      return Validate.isUidValid(this.uid) &&
+             Validate.isCodeValid(this.code) &&
+             ! this._isLinkDamaged;
+    },
+
     context: function () {
+      var doesLinkValidate = this._doesLinkValidate();
+
       return {
         // If the link is invalid, print a special error message.
-        isLinkDamaged: this._isLinkDamaged,
+        isLinkDamaged: ! doesLinkValidate,
         error: this._error
       };
     }
