@@ -77,7 +77,8 @@ require([
   '../tests/spec/views/confirm_reset_password',
   '../tests/spec/views/complete_reset_password',
   '../tests/spec/views/ready',
-  '../tests/spec/views/cookies_disabled'
+  '../tests/spec/views/cookies_disabled',
+  '../tests/spec/views/progress-indicator'
 ],
 function (Translator, Session, FxaClientWrapper) {
 

@@ -62,7 +62,7 @@ function (p, BaseView, SignInView, Template, Session, Url) {
       return this.signIn(email, password);
     },
 
-    resetPasswordNow: BaseView.cancelEventThen(function () {
+    resetPasswordNow: BaseView.cancelEventThen(BaseView.withProgress(function () {
       var self = this;
       return p().then(function () {
         // If the user is already making a request, ban submission.
@@ -81,7 +81,7 @@ function (p, BaseView, SignInView, Template, Session, Url) {
                   self.displayError(err);
                 });
       });
-    })
+    }))
   });
 
   return View;

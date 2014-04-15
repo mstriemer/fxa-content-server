@@ -650,9 +650,12 @@ input[type="text"] ~ .show-password-label:hover {
   background-size: 36px 36px;
   display: block;
   height: 36px;
-  margin: 130px auto 0;
+  left: 50%;
+  margin: -18px auto 0 -18px;
   overflow: hidden;
+  position: absolute;
   text-indent: 100%;
+  top: 45%;
   white-space: nowrap;
   width: 36px;
 }

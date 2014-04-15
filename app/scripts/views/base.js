@@ -13,11 +13,42 @@ define([
   'lib/auth-errors',
   'lib/fxa-client',
   'lib/url',
-  'lib/strings'
+  'lib/strings',
+  'views/progress-indicator'
 ],
-function (_, Backbone, jQuery, p, Session, authErrors, FxaClient, Url, Strings) {
+function (_, Backbone, jQuery, p, Session, authErrors, FxaClient, Url, Strings, ProgressIndicator) {
   var ENTER_BUTTON_CODE = 13;
   var DEFAULT_TITLE = window.document.title;
+
+  /**
+   * An asynchronous action that may need a progress indicator.
+   *
+   * @method withProgress
+   * @return {promise} resolves with the return value of the handler, or
+   * rejects with any errors.
+   */
+  var progressIndicator = new ProgressIndicator();
+  function withProgress(handler) {
+    return function () {
+      var self = this;
+
+      var args = [].slice.call(arguments, 0);
+      args.unshift(handler);
+
+      progressIndicator.start();
+      return p()
+          .then(function () {
+            return self.invokeHandler.apply(self, args);
+          })
+          .then(function (value) {
+            progressIndicator.done(self.className);
+            return value;
+          }, function(err) {
+            progressIndicator.done(self.className);
+            throw err;
+          });
+    };
+  }
 
   var BaseView = Backbone.View.extend({
     constructor: function (options) {
@@ -44,7 +75,7 @@ function (_, Backbone, jQuery, p, Session, authErrors, FxaClient, Url, Strings) 
      * * afterRender - called after the rendering occurs. Can be used
      *   to print an error message after the view is already rendered.
      */
-    render: function () {
+    render: withProgress(function () {
       var self = this;
       return p()
         .then(function () {
@@ -77,7 +108,7 @@ function (_, Backbone, jQuery, p, Session, authErrors, FxaClient, Url, Strings) 
             return true;
           });
         });
-    },
+    }),
 
     /**
      * Checks if the user is authorized to view the page. Currently
@@ -347,8 +378,9 @@ function (_, Backbone, jQuery, p, Session, authErrors, FxaClient, Url, Strings) 
      * the handler on `this`.
      *
      * @method invokeHandler
+     * @param {string || function} handler.
      */
-    invokeHandler: function (handler, event) {
+    invokeHandler: function (handler/*, args...*/) {
       // convert a name to a function.
       if (typeof handler === 'string') {
         handler = this[handler];
@@ -359,7 +391,8 @@ function (_, Backbone, jQuery, p, Session, authErrors, FxaClient, Url, Strings) 
       }
 
       if (typeof handler === 'function') {
-        return handler.call(this, event);
+        var args = [].slice.call(arguments, 1);
+        return handler.apply(this, args);
       }
     },
 
@@ -414,6 +447,11 @@ function (_, Backbone, jQuery, p, Session, authErrors, FxaClient, Url, Strings) 
       return this.invokeHandler.apply(this, args);
     };
   };
+
+  /**
+   * Expose withProgress to other classes
+   */
+  BaseView.withProgress = withProgress;
 
   /**
    * t is a wrapper that is used for string extraction. The extraction

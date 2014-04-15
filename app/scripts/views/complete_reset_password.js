@@ -113,7 +113,7 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate, aut
       return this.$('#vpassword').val();
     },
 
-    resendResetEmail: function () {
+    resendResetEmail: BaseView.withProgress(function () {
       var self = this;
       return this.fxaClient.passwordReset(this.email)
               .then(function () {
@@ -121,7 +121,7 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, Validate, aut
               }, function (err) {
                 self.displayError(err);
               });
-    }
+    })
   });
 
   _.extend(View.prototype, PasswordMixin);

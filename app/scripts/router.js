@@ -133,24 +133,13 @@ function (
             return;
           }
 
-          // Render the new view and explicitly set the `display: block`
-          // using .css. When embedded in about:accounts, the content
-          // is not yet visible and show will not display the element.
-          self.$stage.html(viewToShow.el).css('display', 'block');
+          // Add the new view to the DOM.
+          self.$stage.html(viewToShow.el);
           viewToShow.afterVisible();
 
           // The user may be scrolled part way down the page
           // on screen transition. Force them to the top of the page.
           self.window.scrollTo(0, 0);
-
-          self.$logo = $('#fox-logo');
-          var name = self.currentView.el.className;
-
-          if (name === 'sign-in' || name === 'sign-up') {
-            self.$logo.addClass('fade-down-logo');
-          }
-
-          self.$logo.css('opacity', 1);
         });
     },
 

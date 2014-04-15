@@ -151,7 +151,7 @@ function (_, $, p, Validate, BaseView, Tooltip) {
      * @method validateAndSubmit
      * @return {promise}
      */
-    validateAndSubmit: function () {
+    validateAndSubmit: BaseView.withProgress(function () {
       var self = this;
 
       function submitForm() {
@@ -207,7 +207,7 @@ function (_, $, p, Validate, BaseView, Tooltip) {
 
           throw err;
         });
-    },
+    }),
 
     /**
      * Checks whether the form is valid. Checks the validitity of each
