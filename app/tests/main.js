@@ -48,6 +48,7 @@ function (Translator, Session) {
   var tests = [
     '../tests/spec/lib/channels/web',
     '../tests/spec/lib/channels/fx-desktop',
+    '../tests/spec/lib/channels/iframe',
     '../tests/spec/lib/xss',
     '../tests/spec/lib/url',
     '../tests/spec/lib/session',

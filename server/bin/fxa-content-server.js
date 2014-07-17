@@ -67,7 +67,7 @@ function makeApp() {
   // render the correct template for the locale.
   app.use(localizedRender({ i18n: i18n }));
 
-  app.use(helmet.xframe('deny'));
+  /*app.use(helmet.xframe('deny'));*/
   app.use(helmet.iexss());
   app.use(helmet.hsts(config.get('hsts_max_age'), true));
   app.use(helmet.contentTypeOptions());
