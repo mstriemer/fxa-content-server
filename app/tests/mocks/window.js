@@ -87,6 +87,14 @@ function (_, Backbone) {
 
     navigator: {
       language: 'en-US'
+    },
+
+    postMessage: function(msg, targetOrigin) {
+      if (! this.postedMessages) {
+        this.postedMessages = {};
+      }
+
+      this.dispatchedEvents[msg] = targetOrigin;
     }
   });
 

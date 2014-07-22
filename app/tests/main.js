@@ -49,6 +49,7 @@ function (Translator, Session) {
     '../tests/spec/lib/channels/fx_web',
     '../tests/spec/lib/channels/null',
     '../tests/spec/lib/channels/fx_desktop',
+    '../tests/spec/lib/channels/iframe',
     '../tests/spec/lib/xss',
     '../tests/spec/lib/url',
     '../tests/spec/lib/session',
