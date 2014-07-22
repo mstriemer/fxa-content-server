@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// helper functions for views with passwords. Meant to be mixed into views.
+// OAuth/services helper.
 
 'use strict';
 
@@ -18,9 +18,10 @@ define([
   'lib/session',
   'lib/service-name',
   'lib/channels/fx_web',
-  'lib/channels/url'
+  'lib/channels/url',
+  'lib/channels/iframe'
 ], function (p, BaseView, FormView, Url, OAuthClient, Assertion, OAuthErrors,
-    ConfigLoader, Session, ServiceName, FxWebChannel, UrlChannel) {
+    ConfigLoader, Session, ServiceName, FxWebChannel, UrlChannel, IFrameChannel) {
   /* jshint camelcase: false */
 
   // If the user completes an OAuth flow using a different browser than
@@ -68,6 +69,11 @@ define([
         channel = new FxWebChannel();
         channel.init({
           webChannelId: this._oAuthParams.webChannelId
+        });
+      } else if (this.window && this.window.parent !== this.window) {
+        channel = new IFrameChannel();
+        channel.init({
+          window: this.window
         });
       } else {
         channel = new UrlChannel();

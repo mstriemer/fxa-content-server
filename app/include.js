@@ -183,7 +183,7 @@
         });
       }, false);
 
-      return promise();
+      return promise;
     }
   };
 
