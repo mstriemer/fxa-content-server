@@ -126,7 +126,8 @@ function (
           // route displayed in the URL because the user is immediately
           // redirected to cookies_disabled
           var shouldRenderFirstView = ! areCookiesEnabled;
-          self._history.start({ pushState: true, silent: shouldRenderFirstView });
+          var isIFrame = self._window.top !== self._window;
+          self._history.start({ pushState: !isIFrame, silent: shouldRenderFirstView });
 
           if (! areCookiesEnabled) {
             self._router.navigate('cookies_disabled');
