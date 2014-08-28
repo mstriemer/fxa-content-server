@@ -7,14 +7,17 @@
 
 define([
   'chai',
+  'sinon',
   'lib/app-start',
   'lib/session',
   'lib/constants',
+  'lib/promise',
+  'models/brokers/broker',
   '../../mocks/window',
   '../../mocks/router',
   '../../mocks/history'
 ],
-function (chai, AppStart, Session, Constants, WindowMock, RouterMock, HistoryMock) {
+function (chai, sinon, AppStart, Session, Constants, p, Broker, WindowMock, RouterMock, HistoryMock) {
   /*global describe, beforeEach, it*/
   var assert = chai.assert;
 
@@ -22,34 +25,20 @@ function (chai, AppStart, Session, Constants, WindowMock, RouterMock, HistoryMoc
     var windowMock;
     var routerMock;
     var historyMock;
+    var brokerMock;
     var appStart;
-
-
-    function getFxDesktopContextSearchString() {
-      return '?context=' + Constants.FX_DESKTOP_CONTEXT;
-    }
-
-    function dispatchEventFromWindowMock(status, data) {
-      windowMock.dispatchEvent({
-        detail: {
-          command: 'message',
-          data: {
-            status: status,
-            data: data
-          }
-        }
-      });
-    }
 
     beforeEach(function () {
       windowMock = new WindowMock();
       routerMock = new RouterMock();
       historyMock = new HistoryMock();
+      brokerMock = new Broker();
 
       appStart = new AppStart({
         window: windowMock,
         router: routerMock,
-        history: historyMock
+        history: historyMock,
+        broker: brokerMock
       });
     });
 
@@ -79,13 +68,9 @@ function (chai, AppStart, Session, Constants, WindowMock, RouterMock, HistoryMoc
             });
       });
 
-      it('redirects to /settings if the context is FXA_DESKTOP and user is signed in', function () {
-        windowMock.location.search = getFxDesktopContextSearchString();
-
-        windowMock.on('session_status', function () {
-          dispatchEventFromWindowMock('session_status', {
-            email: 'testuser@testuser.com'
-          });
+      it('redirects to the start page specified by the broker', function () {
+        sinon.stub(brokerMock, 'selectStartPage', function () {
+          return p('settings');
         });
 
         return appStart.startApp()
@@ -94,33 +79,15 @@ function (chai, AppStart, Session, Constants, WindowMock, RouterMock, HistoryMoc
             });
       });
 
-      it('redirects to /signup if the context is FXA_DESKTOP, no email is set, and no pathname is specified', function () {
-        windowMock.location.search = getFxDesktopContextSearchString();
-
-        windowMock.on('session_status', function () {
-          // no data from session_status signifies no user is signed in.
-          dispatchEventFromWindowMock('session_status');
+      it('does not redirect if the broker does not return a start page', function () {
+        sinon.stub(brokerMock, 'selectStartPage', function () {
+          return p();
         });
 
+        routerMock.page = 'signup';
         return appStart.startApp()
             .then(function () {
               assert.equal(routerMock.page, 'signup');
-            });
-      });
-
-      it('does not redirect the user if a route is present in the path', function () {
-        windowMock.location.search = getFxDesktopContextSearchString();
-        windowMock.location.pathname = '/signin';
-        routerMock.page = 'signin';
-
-        windowMock.on('session_status', function () {
-          // no data from session_status signifies no user is signed in.
-          dispatchEventFromWindowMock('session_status');
-        });
-
-        return appStart.startApp()
-            .then(function () {
-              assert.equal(routerMock.page, 'signin');
             });
       });
 

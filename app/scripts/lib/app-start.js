@@ -30,7 +30,10 @@ define([
   'lib/metrics',
   'lib/null-metrics',
   'lib/fxa-client',
-  'models/reliers/relier'
+  'lib/constants',
+  'models/reliers/relier',
+  'models/brokers/broker',
+  'models/brokers/fx-desktop'
 ],
 function (
   _,
@@ -45,7 +48,10 @@ function (
   Metrics,
   NullMetrics,
   FxaClient,
-  Relier
+  Constants,
+  Relier,
+  Broker,
+  FxDesktopBroker
 ) {
 
   function isMetricsCollectionEnabled (sampleRate) {
@@ -65,6 +71,8 @@ function (
 
     this._window = options.window || window;
     this._router = options.router;
+    this._relier = options.relier;
+    this._broker = options.broker;
 
     this._history = options.history || Backbone.history;
     this._configLoader = new ConfigLoader();
@@ -76,22 +84,25 @@ function (
 
       // fetch both config and translations in parallel to speed up load.
       return p.all([
+        this.initializeRelier(),
         this.initializeConfig(),
         this.initializeL10n()
       ])
+      // broker relies on the relier.
+      .then(_.bind(this.initializeBroker, this))
+      // fxaClient depends on the relier
+      .then(_.bind(this.initializeFxaClient, this))
+      // both the metrics and router depend on the language
+      // fetched from config.
+      .then(_.bind(this.initializeMetrics, this))
+      // router depends on all of the above
+      .then(_.bind(this.initializeRouter, this))
       .then(_.bind(this.allResourcesReady, this));
     },
 
     initializeConfig: function () {
       return this._configLoader.fetch()
-                    .then(_.bind(this.useConfig, this))
-                    // both the metrics and router depend on the language
-                    // fetched from config.
-                    .then(_.bind(this.initializeMetrics, this))
-                    .then(_.bind(this.initializeRelier, this))
-                    .then(_.bind(this.initializeFxaClient, this))
-                    // router depends on all of the above
-                    .then(_.bind(this.initializeRouter, this));
+                    .then(_.bind(this.useConfig, this));
     },
 
     useConfig: function (config) {
@@ -113,8 +124,17 @@ function (
     },
 
     initializeRelier: function () {
-      this._relier = new Relier();
-      return this._relier.fetch();
+      if (! this._relier) {
+        this._relier = new Relier({
+          window: this._window
+        });
+
+        return this._relier.fetch();
+      }
+    },
+
+    _isFxDesktop: function () {
+      return this._searchParam('context') === Constants.FX_DESKTOP_CONTEXT;
     },
 
     initializeFxaClient: function () {
@@ -122,6 +142,23 @@ function (
         this._fxaClient = new FxaClient({
           relier: this._relier
         });
+      }
+    },
+
+    initializeBroker: function () {
+      if (! this._broker) {
+        if (this._isFxDesktop()) {
+          this._broker = new FxDesktopBroker({
+            window: this._window,
+            relier: this._relier
+          });
+        } else {
+          this._broker = new Broker({
+            relier: this._relier
+          });
+        }
+
+        return this._broker.fetch();
       }
     },
 
@@ -141,47 +178,33 @@ function (
       // These must be initialized after Backbone.history so that
       // Backbone does not override the page the channel sets.
       var self = this;
-      return this._configLoader.areCookiesEnabled()
-        .then(function (areCookiesEnabled) {
-          // Get the party started.
-          // If cookies are disabled, do not attempt to render the
-          // route displayed in the URL because the user is immediately
-          // redirected to cookies_disabled
-          var shouldRenderFirstView = ! areCookiesEnabled;
-          self._history.start({ pushState: true, silent: shouldRenderFirstView });
+      return this._selectStartPage()
+          .then(function (startPage) {
+            // Get the party started.
+            // If a new start page is specified, do not attempt to render
+            // the route displayed in the URL because the user is
+            // immediately redirected
+            self._history.start({ pushState: true, silent: !! startPage });
+            if (startPage) {
+              self._router.navigate(startPage);
+            }
+          });
+    },
 
-          if (! areCookiesEnabled) {
-            self._router.navigate('cookies_disabled');
-          } else if (Session.isDesktopContext()) {
-            return self._selectFxDesktopStartPage();
-          }
-        });
+    _selectStartPage: function () {
+      var self = this;
+      return this._configLoader.areCookiesEnabled()
+          .then(function (areCookiesEnabled) {
+            if (! areCookiesEnabled) {
+              return 'cookies_disabled';
+            }
+
+            return self._broker.selectStartPage();
+          });
     },
 
     _searchParam: function (name) {
       return Url.searchParam(name, this._window.location.search);
-    },
-
-    // XXX - does this belong here?
-    _selectFxDesktopStartPage: function () {
-      // Firefox for desktop native=>FxA glue code.
-      var self = this;
-      return Channels.sendExpectResponse('session_status', {}, { window: this._window })
-          .then(function (response) {
-            // Don't perform any redirection if a pathname is present
-            var canRedirect = self._window.location.pathname === '/';
-            if (response && response.data) {
-              Session.set('email', response.data.email);
-              if (! Session.forceAuth && canRedirect) {
-                self._router.navigate('settings', { trigger: true });
-              }
-            } else {
-              Session.clear();
-              if (canRedirect) {
-                self._router.navigate('signup', { trigger: true });
-              }
-            }
-          });
     },
 
     setSessionValueFromUrl: function (paramName, sessionName) {

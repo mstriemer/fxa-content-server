@@ -66,7 +66,8 @@ function (Translator, Session, FxaClientWrapper) {
     '../tests/spec/views/mixins/floating-placeholder-mixin',
     '../tests/spec/views/mixins/timer-mixin',
     '../tests/spec/views/mixins/service-mixin',
-    '../tests/spec/models/reliers/relier'
+    '../tests/spec/models/reliers/relier',
+    '../tests/spec/models/brokers/fx-desktop'
   ];
 
   /*global mocha */
