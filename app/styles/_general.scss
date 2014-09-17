@@ -833,6 +833,7 @@ input[type="text"] {
   width: 36px;
 }
 
+button .spinner,
 .spinner-white {
   animation: 0.9s spin infinite linear;
   background-image: image-url('spinnerwhite.png');
