@@ -17,9 +17,13 @@ define([
   'lib/auth-errors',
   'lib/constants',
   'lib/channels',
+  'lib/resume-token',
   'models/reliers/base'
 ],
-function (_, FxaClient, $, p, Session, AuthErrors, Constants, Channels, BaseRelier) {
+function (_, FxaClient, $, p, Session, AuthErrors, Constants, Channels,
+      ResumeToken, BaseRelier) {
+  var RELIER_FIELDS_IN_RESUME_TOKEN = ['state', 'clientId', 'scope'];
+
   // IE 8 doesn't support String.prototype.trim
   function trim(str) {
     return str && str.replace(/^\s+|\s+$/g, '');
@@ -213,6 +217,12 @@ function (_, FxaClient, $, p, Session, AuthErrors, Constants, Channels, BaseReli
                   signUpOptions.preVerifyToken = options.preVerifyToken;
                 }
 
+                // only send the resume token if we are not trying to
+                // pre-verify.
+                if (! options.preVerifyToken) {
+                  signUpOptions.resume = self._createResumeToken(originalEmail);
+                }
+
                 return client.signUp(email, password, signUpOptions);
               })
               .then(function () {
@@ -238,7 +248,8 @@ function (_, FxaClient, $, p, Session, AuthErrors, Constants, Channels, BaseReli
 
           var clientOptions = {
             service: self._relier.get('service'),
-            redirectTo: self._relier.get('redirectTo')
+            redirectTo: self._relier.get('redirectTo'),
+            resume: self._createResumeToken(Session.email)
           };
 
           return client.recoveryEmailResendCode(
@@ -282,7 +293,8 @@ function (_, FxaClient, $, p, Session, AuthErrors, Constants, Channels, BaseReli
               .then(function (client) {
                 var clientOptions = {
                   service: self._relier.get('service'),
-                  redirectTo: self._relier.get('redirectTo')
+                  redirectTo: self._relier.get('redirectTo'),
+                  resume: self._createResumeToken(originalEmail)
                 };
 
                 return client.passwordForgotSendCode(email, clientOptions);
@@ -315,7 +327,8 @@ function (_, FxaClient, $, p, Session, AuthErrors, Constants, Channels, BaseReli
           // passwordForgotResendCode
           var clientOptions = {
             service: self._relier.get('service'),
-            redirectTo: self._relier.get('redirectTo')
+            redirectTo: self._relier.get('redirectTo'),
+            resume: self._createResumeToken(Session.email)
           };
 
           return client.passwordForgotResendCode(
@@ -431,6 +444,25 @@ function (_, FxaClient, $, p, Session, AuthErrors, Constants, Channels, BaseReli
         .then(function (client) {
           return client.recoveryEmailStatus(sessionToken);
         });
+    },
+
+    // The resume token is for use post-verification if the
+    // user verifies in a second client. resume allows people
+    // to continue to the original OAuth RP. redirect_uri is not
+    // added to the resume token because it comes from the oauth
+    // server on verification.
+    _createResumeToken: function (email) {
+      var resumeObj = {
+        email: trim(email)
+      };
+
+      _.each(RELIER_FIELDS_IN_RESUME_TOKEN, function (itemName) {
+        if (this._relier.has(itemName)) {
+          resumeObj[itemName] = this._relier.get(itemName);
+        }
+      }, this);
+
+      return ResumeToken.stringify(resumeObj);
     }
   };
 

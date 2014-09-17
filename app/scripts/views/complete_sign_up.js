@@ -11,34 +11,42 @@ define([
   'stache!templates/complete_sign_up',
   'lib/auth-errors',
   'lib/validate',
+  'lib/session',
   'views/mixins/resend-mixin',
-  'lib/session'
+  'views/mixins/service-mixin',
+  'views/mixins/password-mixin',
+  'views/decorators/notify_delayed_request',
+  'views/decorators/allow_only_one_submit'
 ],
-function (_, FormView, BaseView, CompleteSignUpTemplate, AuthErrors, Validate, ResendMixin, Session) {
+function (_, FormView, BaseView, CompleteSignUpTemplate, AuthErrors,
+      Validate, Session, ResendMixin, ServiceMixin, PasswordMixin,
+      notifyDelayedRequest, allowOnlyOneSubmit) {
   var CompleteSignUpView = FormView.extend({
     template: CompleteSignUpTemplate,
     className: 'complete_sign_up',
 
     events: {
-      // validateAndSubmit is used to prevent multiple concurrent submissions.
-      'click #resend': BaseView.preventDefaultThen('validateAndSubmit')
+      'change .show-password': 'onPasswordVisibilityChange',
+      'click #resend': 'resend'
+    },
+
+    _importSearchParam: function (paramName) {
+      // Remove any spaces that are probably due to a MUA adding
+      // line breaks in the middle of the link.
+      this.importSearchParam(paramName);
+      this[paramName].replace(/ /g, '');
     },
 
     beforeRender: function () {
       try {
-        this.importSearchParam('uid');
-        this.importSearchParam('code');
+        this._importSearchParam('uid');
+        this._importSearchParam('code');
       } catch(e) {
         this.logEvent('complete_sign_up.link_damaged');
         // This is an invalid link. Abort and show an error message
         // before doing any more checks.
         return true;
       }
-
-      // Remove any spaces that are probably due to a MUA adding
-      // line breaks in the middle of the link.
-      this.uid = this.uid.replace(/ /g, '');
-      this.code = this.code.replace(/ /g, '');
 
       if (! this._doesLinkValidate()) {
         // One or more parameters fails validation. Abort and show an
@@ -48,8 +56,24 @@ function (_, FormView, BaseView, CompleteSignUpTemplate, AuthErrors, Validate, R
       }
 
       var self = this;
+
       return this.fxaClient.verifyCode(this.uid, this.code)
           .then(function () {
+            // If the user completes the oauth email verification in
+            // a second client and all of the necessary parameters are
+            // available to generate an assertion, the user must sign in
+            // verify their password before an assertion can be generated.
+            // Show the screen.
+            if (self.isOAuthDifferentBrowser() &&
+                self.relier.canResume()) {
+              return;
+            }
+
+            // if the user is here, they are verifying in the same browser OR
+            // it's not an oauth flow and the user should see the "signup
+            // complete" screen immediately OR the `resume` token was munged
+            // and the user cannot continue the OAuth flow in this browser but
+            // should see a "signup complete!" message anyways.
             self.navigate('signup_complete');
             return false;
           })
@@ -82,19 +106,35 @@ function (_, FormView, BaseView, CompleteSignUpTemplate, AuthErrors, Validate, R
       // This is only the case if you've signed up in the same browser
       // you opened the verification link in.
       var canResend = !!Session.sessionToken;
+      var isOAuthDifferentBrowser = this.isOAuthDifferentBrowser();
+      var email = this.relier.get('email');
 
       return {
         // If the link is invalid, print a special error message.
         isLinkDamaged: ! doesLinkValidate,
         isLinkExpired: isLinkExpired,
         canResend: canResend,
+        isOAuthDifferentBrowser: isOAuthDifferentBrowser,
+        email: email,
         error: this._error
       };
     },
 
+    // for users who verify in a second client and must enter their password
+    submit: function () {
+      var self = this;
+      var email = self.relier.get('email');
+      var password = self.$('.password').val();
+
+      return self.fxaClient.signIn(email, password)
+          .then(function () {
+            self.navigate('signup_complete');
+          });
+    },
+
     // This is called when a user follows an expired verification link
     // and clicks the "Resend" link.
-    submit: function () {
+    resend: BaseView.preventDefaultThen(allowOnlyOneSubmit(notifyDelayedRequest(function () {
       var self = this;
 
       self.logEvent('complete_sign_up.resend');
@@ -111,10 +151,11 @@ function (_, FormView, BaseView, CompleteSignUpTemplate, AuthErrors, Validate, R
                 // unexpected error, rethrow for display.
                 throw err;
               });
-    }
+    })))
   });
 
-  _.extend(CompleteSignUpView.prototype, ResendMixin);
+  _.extend(CompleteSignUpView.prototype, ResendMixin, ServiceMixin,
+            PasswordMixin);
 
   return CompleteSignUpView;
 });

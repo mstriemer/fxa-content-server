@@ -46,6 +46,10 @@ define([
       return true;
     },
 
+    canResume: function () {
+      return this.isSync();
+    },
+
     _setupServiceName: function () {
       var service = this.get('service');
       if (service) {

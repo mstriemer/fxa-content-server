@@ -129,7 +129,7 @@ function (chai, $, sinon, View, p, Session, FxaClient, Metrics, AuthErrors,
     });
 
     describe('submit without a preVerifyToken', function () {
-      it('sets up the user\'s oauth session on success', function () {
+      it('sets up the user\'s ouath session on success', function () {
         fillOutSignUp(email, 'password', { year: nowYear - 14, context: view });
 
         sinon.stub(fxaClient, 'signUp', function () {

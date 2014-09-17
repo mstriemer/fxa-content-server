@@ -13,13 +13,14 @@ define([
   'lib/fxa-client',
   'lib/auth-errors',
   'lib/constants',
+  'lib/resume-token',
   'models/reliers/relier'
 ],
 // FxaClientWrapper is the object that is used in
 // fxa-content-server views. It wraps FxaClient to
 // take care of some app-specific housekeeping.
 function (chai, $, sinon, p, ChannelMock, testHelpers, Session,
-    FxaClientWrapper, AuthErrors, Constants, Relier) {
+    FxaClientWrapper, AuthErrors, Constants, ResumeToken, Relier) {
   'use strict';
 
   var assert = chai.assert;
@@ -29,6 +30,7 @@ function (chai, $, sinon, p, ChannelMock, testHelpers, Session,
   var realClient;
   var channelMock;
   var relier;
+  var expectedResumeToken;
 
   function trim(str) {
     return str && str.replace(/^\s+|\s+$/g, '');
@@ -39,6 +41,8 @@ function (chai, $, sinon, p, ChannelMock, testHelpers, Session,
       channelMock = new ChannelMock();
       email = ' ' + testHelpers.createEmail() + ' ';
       relier = new Relier();
+
+      expectedResumeToken = ResumeToken.stringify({ email: $.trim(email) });
 
       client = new FxaClientWrapper({
         channel: channelMock,
@@ -73,7 +77,8 @@ function (chai, $, sinon, p, ChannelMock, testHelpers, Session,
             assert.isTrue(realClient.signUp.calledWith(trim(email), password, {
               keys: true,
               service: 'sync',
-              redirectTo: 'https://sync.firefox.com'
+              redirectTo: 'https://sync.firefox.com',
+              resume: expectedResumeToken
             }));
           });
       });
@@ -125,7 +130,8 @@ function (chai, $, sinon, p, ChannelMock, testHelpers, Session,
           .then(function () {
             var params = {
               service: 'sync',
-              redirectTo: 'https://sync.firefox.com'
+              redirectTo: 'https://sync.firefox.com',
+              resume: expectedResumeToken
             };
             assert.isTrue(
                 realClient.recoveryEmailResendCode.calledWith(
@@ -334,7 +340,8 @@ function (chai, $, sinon, p, ChannelMock, testHelpers, Session,
           .then(function () {
             var params = {
               service: 'sync',
-              redirectTo: 'https://sync.firefox.com'
+              redirectTo: 'https://sync.firefox.com',
+              resume: expectedResumeToken
             };
             assert.isTrue(
                 realClient.passwordForgotSendCode.calledWith(
@@ -346,7 +353,8 @@ function (chai, $, sinon, p, ChannelMock, testHelpers, Session,
           .then(function () {
             var params = {
               service: 'sync',
-              redirectTo: 'https://sync.firefox.com'
+              redirectTo: 'https://sync.firefox.com',
+              resume: expectedResumeToken
             };
             assert.isTrue(
                 realClient.passwordForgotResendCode.calledWith(

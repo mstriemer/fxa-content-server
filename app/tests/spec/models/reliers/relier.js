@@ -7,9 +7,10 @@
 define([
   'chai',
   'models/reliers/relier',
+  'lib/resume-token',
   '../../../mocks/window',
   '../../../lib/helpers'
-], function (chai, Relier, WindowMock, TestHelpers) {
+], function (chai, Relier, ResumeToken, WindowMock, TestHelpers) {
   var assert = chai.assert;
 
   describe('models/reliers/relier', function () {

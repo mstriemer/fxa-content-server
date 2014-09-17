@@ -94,16 +94,9 @@ function (_, BaseView, FormView, Template, Session, Xss, Url, Strings, AuthError
     },
 
     submit: function () {
-      if (this.isOAuthSameBrowser()) {
-        return this.finishOAuthFlow({
-          source: this.type
-        });
-      } else if (this.isOAuthDifferentBrowser()) {
-        return this.finishOAuthFlowDifferentBrowser();
-      } else {
-        // We aren't expecting this case to happen.
-        this.displayError(AuthErrors.toError('UNEXPECTED_ERROR'));
-      }
+      return this.finishOAuthFlow({
+        source: this.type
+      });
     },
 
     is: function (type) {

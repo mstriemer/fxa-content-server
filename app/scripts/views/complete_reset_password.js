@@ -102,17 +102,15 @@ function (_, BaseView, FormView, Template, Session, PasswordMixin, FloatingPlace
       var self = this;
       return this.fxaClient.completePasswordReset(this.email, password, this.token, this.code)
           .then(function () {
-            // Get a new sessionToken if we're in an OAuth flow
-            // so that we can generate FxA assertions
-            if (self.isOAuthSameBrowser()) {
-              // cache oauth params because signIn will clear them
-              var params = Session.oauth;
-              return self.fxaClient.signIn(self.email, password)
-                .then(function () {
-                  // restore oauth params
-                  Session.set('oauth', params);
-                });
-            }
+            // Get a new sessionToken so that we can generate FxA assertions
+
+            // cache oauth params because signIn will clear them
+            var params = Session.oauth;
+            return self.fxaClient.signIn(self.email, password)
+              .then(function () {
+                // restore oauth params
+                Session.set('oauth', params);
+              });
           })
           .then(function () {
             self.navigate('reset_password_complete');

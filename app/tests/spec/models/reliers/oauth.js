@@ -8,13 +8,14 @@ define([
   'chai',
   'sinon',
   'models/reliers/oauth',
-  'lib/session',
+  'lib/resume-token',
   'lib/oauth-client',
   'lib/promise',
+  'lib/session',
   '../../../mocks/window',
   '../../../lib/helpers'
-], function (chai, sinon, OAuthRelier, Session, OAuthClient, p, WindowMock,
-      TestHelpers) {
+], function (chai, sinon, OAuthRelier, ResumeToken, OAuthClient, p,
+      Session, WindowMock, TestHelpers) {
   var assert = chai.assert;
 
   describe('models/reliers/oauth', function () {
@@ -31,13 +32,14 @@ define([
     var SCOPE = 'profile:name';
     var ACTION = 'signup';
     var PREVERIFY_TOKEN = 'abigtoken';
+    var EMAIL = 'testuser@testuser.com';
 
     var RESUME_INFO = {
       state: STATE,
-      //jshint camelcase: false
-      client_id: CLIENT_ID,
+      clientId: CLIENT_ID,
       scope: SCOPE,
-      action: ACTION
+      action: ACTION,
+      email: EMAIL
     };
 
     beforeEach(function () {
@@ -47,6 +49,7 @@ define([
       sinon.stub(oAuthClient, 'getClientInfo', function () {
         return p({
           name: SERVICE_NAME,
+               // jshint camelcase:false
           redirect_uri: SERVER_REDIRECT_URI
         });
       });
@@ -106,17 +109,20 @@ define([
             });
       });
 
-      it('populates OAuth information from Session to allow a user to verify', function () {
+      it('populates OAuth information based on `resume` to allow a user to verify in a second browser', function () {
         windowMock.location.search = TestHelpers.toSearchString({
-          code: '123'
+          resume: ResumeToken.stringify(RESUME_INFO)
         });
-        Session.set('oauth', RESUME_INFO);
 
         return relier.fetch()
             .then(function () {
               assert.equal(relier.get('state'), STATE);
               assert.equal(relier.get('clientId'), CLIENT_ID);
               assert.equal(relier.get('scope'), SCOPE);
+
+              // email is imported post-verification to allow the user
+              // to sign-in if needed.
+              assert.equal(relier.get('email'), EMAIL);
             });
       });
 

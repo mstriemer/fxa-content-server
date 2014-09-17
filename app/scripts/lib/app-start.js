@@ -162,7 +162,7 @@ function (
     },
 
     _isOAuth: function () {
-      return !! (this._searchParam('client_id') || this._searchParam('code'));
+      return !! (this._searchParam('client_id') || this._searchParam('resume'));
     },
 
     initializeFxaClient: function () {

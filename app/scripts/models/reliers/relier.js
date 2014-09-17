@@ -80,6 +80,14 @@ define([
      */
     isSync: function () {
       return this.get('service') === 'sync';
+    },
+
+    /**
+     * Check whether the user can complete the OAuth flow
+     * in a second client.
+     */
+    canResume: function () {
+      return false;
     }
   });
 

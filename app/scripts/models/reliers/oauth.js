@@ -10,8 +10,9 @@
 
 define([
   'underscore',
-  'models/reliers/relier'
-], function (_, Relier) {
+  'models/reliers/relier',
+  'lib/resume-token'
+], function (_, Relier, ResumeToken) {
 
   var OAuthRelier = Relier.extend({
     defaults: _.extend({}, Relier.prototype.defaults, {
@@ -60,24 +61,45 @@ define([
       return true;
     },
 
+    canResume: function () {
+      return this.has('state') &&
+             this.has('clientId') &&
+             this.has('scope') &&
+             this.has('email');
+
+    },
+
     _isVerificationFlow: function () {
-      return !! this.getSearchParam('code');
+      return !! this.getSearchParam('resume');
     },
 
     _setupVerificationFlow: function () {
       var self = this;
 
-      var resumeObj = self._session.oauth;
+      var resumeObj = ResumeToken.parse(this.getSearchParam('resume'));
+
+      // If there was no resume token, try to get the oauth parameters
+      // from Session. This allows for users verify in the same browser
+      // but their resume token was missing (email sent before server update)
+      // or bad to continue as expected.
+      if (! resumeObj) {
+        resumeObj = self._session.oauth;
+      }
+
       if (! resumeObj) {
         return;
       }
 
+      // all params except redirectUri come from the resume token.
+      // redirectURI will be fetched from the oauth-server.
+      // `email` is imported post-verification to allow the user
+      // to sign-in if needed.
       self.set({
         state: resumeObj.state,
-        //jshint camelcase: false
-        clientId: resumeObj.client_id,
-        redirectUri: resumeObj.redirect_uri,
+        clientId: resumeObj.clientId,
+        redirectUri: resumeObj.redirectUri,
         scope: resumeObj.scope,
+        email: resumeObj.email,
         webChannelId: resumeObj.webChannelId
       });
     },
