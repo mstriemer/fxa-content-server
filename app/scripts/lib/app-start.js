@@ -80,14 +80,28 @@ function (
 
   Start.prototype = {
     startApp: function () {
-      this.initSessionFromUrl();
+      var self = this;
+      return p().then(function () {
+        self.initSessionFromUrl();
 
-      // fetch both config and translations in parallel to speed up load.
-      return p.all([
-        this.initializeConfig(),
-        this.initializeL10n()
-      ])
-      .then(_.bind(this.allResourcesReady, this));
+        // fetch both config and translations in parallel to speed up load.
+        return p.all([
+          self.initializeConfig(),
+          self.initializeL10n()
+        ]);
+      })
+      .then(_.bind(self.allResourcesReady, self))
+      .then(null, function (err) {
+        if (console && console.error) {
+          console.error('Critical error:', err);
+        }
+        if (self._router) {
+          self._router.navigate('unexpected_error', { trigger: true });
+        } else {
+          // Something terrible happened. Let's bail.
+          self._window.location.href = Constants.INTERNAL_ERROR_PAGE;
+        }
+      });
     },
 
     initializeConfig: function () {

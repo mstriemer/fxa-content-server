@@ -7,6 +7,7 @@
 
 define([
   'chai',
+  'sinon',
   'lib/app-start',
   'lib/session',
   'lib/constants',
@@ -14,7 +15,7 @@ define([
   '../../mocks/router',
   '../../mocks/history'
 ],
-function (chai, AppStart, Session, Constants, WindowMock, RouterMock, HistoryMock) {
+function (chai, sinon, AppStart, Session, Constants, WindowMock, RouterMock, HistoryMock) {
   /*global describe, beforeEach, it*/
   var assert = chai.assert;
 
@@ -130,6 +131,32 @@ function (chai, AppStart, Session, Constants, WindowMock, RouterMock, HistoryMoc
                     .then(function () {
                       assert.equal(Session.service, 'testing');
                     });
+      });
+
+      it('redirects to /unexpecte_error if an error occurs and it has a router', function () {
+        sinon.stub(appStart, 'allResourcesReady', function () {
+          throw new Error('boom');
+        });
+
+        return appStart.startApp()
+            .then(function () {
+              assert.equal(routerMock.page, 'unexpected_error');
+            });
+      });
+
+      it('redirects to /503.html if an error occurs and it has no router', function () {
+        appStart = new AppStart({
+          window: windowMock,
+          history: historyMock
+        });
+        sinon.stub(appStart, 'initializeConfig', function () {
+          throw new Error('boom');
+        });
+
+        return appStart.startApp()
+            .then(function () {
+              assert.equal(windowMock.location.href, Constants.INTERNAL_ERROR_PAGE);
+            });
       });
     });
   });
