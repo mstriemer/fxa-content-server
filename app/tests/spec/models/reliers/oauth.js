@@ -53,7 +53,8 @@ define([
 
       relier = new OAuthRelier({
         window: windowMock,
-        oAuthClient: oAuthClient
+        oAuthClient: oAuthClient,
+        session: Session
       });
     });
 

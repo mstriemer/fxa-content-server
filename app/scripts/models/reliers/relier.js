@@ -9,12 +9,12 @@
 'use strict';
 
 define([
-  'backbone',
+  'models/reliers/base',
   'lib/promise',
   'lib/url'
-], function (Backbone, p, Url) {
+], function (BaseRelier, p, Url) {
 
-  var Relier = Backbone.Model.extend({
+  var Relier = BaseRelier.extend({
     defaults: {
       service: null,
       preVerifyToken: null
@@ -73,20 +73,6 @@ define([
       if (typeof value !== 'undefined') {
         this.set(modelName, value);
       }
-    },
-
-    /**
-     * Check if the relier is using the oauth flow
-     */
-    isOAuth: function () {
-      return false;
-    },
-
-    /**
-     * Check if the relier is Firefox Desktop
-     */
-    isFxDesktop: function () {
-      return false;
     },
 
     /**
